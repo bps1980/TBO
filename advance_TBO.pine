@@ -1,0 +1,47 @@
+//@version=4
+strategy("Advanced TBO Strategy with Stop Loss", overlay=true)
+
+// Bollinger Bands Settings
+src = close
+lengthBB = input(20, title="Bollinger Bands Length")
+src_std = input(close, title="Source")
+mult = input(2.0, title="Multiplier")
+basis = sma(src, lengthBB)
+upper = basis + mult * stdev(src_std, lengthBB)
+lower = basis - mult * stdev(src_std, lengthBB)
+
+// Volume Confirmation
+volMultiplier = input(1.5, title="Volume Multiplier")
+avgVol = sma(volume, 20)
+volCondition = volume > avgVol * volMultiplier
+
+// MACD Settings
+[macdLine, signalLine, hist] = macd(src, 12, 26, 9)
+
+// RSI Settings
+rsiLength = input(14, title="RSI Length")
+overbought = 80
+oversold = 20
+rsi = rsi(src, rsiLength)
+
+// Stop Loss
+stopLossPercent = input(3.0, title="Stop Loss (%)") / 100
+
+// Buy/Sell Conditions
+buyCondition = crossover(src, upper) and volCondition and hist > 0 and rsi < overbought
+sellCondition = crossunder(src, lower) and hist < 0 and rsi > oversold
+
+longStopPrice = close * (1 - stopLossPercent)
+shortStopPrice = close * (1 + stopLossPercent)
+
+// Plotting
+plot(upper, color=color.red, title="Upper Bollinger Band")
+plot(lower, color=color.green, title="Lower Bollinger Band")
+
+hline(overbought, color=color.red)
+hline(oversold, color=color.green)
+
+
+// Strategy Orders
+strategy.entry("Bullish Breakout", strategy.long, when = buyCondition, stop=longStopPrice)
+strategy.entry("Bearish Breakout", strategy.short, when = sellCondition, stop=shortStopPrice)
